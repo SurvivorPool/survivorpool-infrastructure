@@ -1,0 +1,14 @@
+aws-account-id = 
+aws-default-region = 
+repo-owner = 
+white-list-ips = 
+cognito-domain-name=
+cognito-callback-urls=[]
+cognito-logout-urls=[]
+app-name=
+repo-name=
+branch=
+github-url=
+container-name=
+cognito-url=
+region=
