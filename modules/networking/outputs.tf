@@ -19,3 +19,7 @@ output "db-parameter-group-name" {
 output "db-security-group-id" {
   value = aws_security_group.rds.id
 }
+
+output "vpc_id" {
+  value = aws_vpc.vpc.id
+}

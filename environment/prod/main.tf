@@ -1,26 +1,28 @@
 terraform {
   backend "s3" {
-    bucket = "terraform-state-fitba"
-    key = "dev/terraform.tfstate"
+    bucket = "terraform-state-survivorpool-prod"
+    key = "prod/terraform.tfstate"
     region = "us-east-1"
   }
 }
 
 locals {
-  github-token = jsondecode(data.aws_secretsmanager_secret_version.dev-secrets.secret_string)["github-token"] 
-  db-password = jsondecode(data.aws_secretsmanager_secret_version.dev-secrets.secret_string)["db-password"]
-  db-user = jsondecode(data.aws_secretsmanager_secret_version.dev-secrets.secret_string)["db-user"]
-  secret-key = jsondecode(data.aws_secretsmanager_secret_version.dev-secrets.secret_string)["secret-key"]
-  certificate-arn = jsondecode(data.aws_secretsmanager_secret_version.dev-secrets.secret_string)["certificate-arn"]
-  cognito-client-id = jsondecode(data.aws_secretsmanager_secret_version.dev-secrets.secret_string)["cognito-client-id"]
-  admin-emails = jsondecode(data.aws_secretsmanager_secret_version.dev-secrets.secret_string)["admin-emails"] 
+  github-token = jsondecode(data.aws_secretsmanager_secret_version.prod-secrets.secret_string)["github-token"] 
+  db-password = jsondecode(data.aws_secretsmanager_secret_version.prod-secrets.secret_string)["db-password"]
+  db-user = jsondecode(data.aws_secretsmanager_secret_version.prod-secrets.secret_string)["db-user"]
+  secret-key = jsondecode(data.aws_secretsmanager_secret_version.prod-secrets.secret_string)["secret-key"]
+  certificate-arn = jsondecode(data.aws_secretsmanager_secret_version.prod-secrets.secret_string)["certificate-arn"]
+  cognito-client-id = jsondecode(data.aws_secretsmanager_secret_version.prod-secrets.secret_string)["cognito-client-id"]
+  admin-emails = jsondecode(data.aws_secretsmanager_secret_version.prod-secrets.secret_string)["admin-emails"] 
 }
+
+
 
 module "cognito" {
   source = "../../modules/cognito"
   pool_name          = "${var.app-name}-${var.env}-cognito"
   client_name        = "${var.app-name}-${var.env}"
-  domain             = "${var.cognito-domain-name}"
+  domain             = "${var.cognito-domain-name}-${var.env}"
   callback_urls      = var.cognito-callback-urls
   logout_urls        = var.cognito-logout-urls
 }
@@ -28,9 +30,20 @@ module "cognito" {
 module "survivorpool-networking" {
   source = "../../modules/networking"
   env = var.env
-  app-name = var.app-name  
+  app-name = var.app-name
   white-list-ips = var.white-list-ips
 }
+
+module "survivorpool-db" {
+  source = "../../modules/rds"
+  env = var.env
+  app-name = var.app-name
+  db-user = local.db-user
+  db-password = local.db-password
+  db-subnet-group-name = module.survivorpool-networking.db-subnet-name
+  db-parameter-group-name = module.survivorpool-networking.db-parameter-group-name
+  vpc-security-group-ids = [module.survivorpool-networking.db-security-group-id]
+} 
 
 module "survivorpool-repository" {
   source = "../../modules/ecr"
@@ -54,30 +67,20 @@ module "survivorpool-cluster" {
   db-name = module.survivorpool-db.database-name
   vpc_id = module.survivorpool-networking.vpc_id
   certificate-arn = local.certificate-arn
-  cognito-client-id = local.cognito-client-id
   cognito-url = var.cognito-url
+  cognito-client-id = local.cognito-client-id
   admin-emails = local.admin-emails
 }
 
-module "survivorpool-db" {
-  source = "../../modules/rds"
-  env = var.env
-  app-name = var.app-name
-  db-user = local.db-user
-  db-password = local.db-password
-  db-subnet-group-name = module.survivorpool-networking.db-subnet-name
-  db-parameter-group-name = module.survivorpool-networking.db-parameter-group-name
-  vpc-security-group-ids = [module.survivorpool-networking.db-security-group-id]
-}
 
 module "survivorpool-cicd-pipeline" {
-  source = "../../modules/pipeline" 
+  source = "../../modules/pipeline"
   env               = var.env
   app-name          = var.app-name
   github-token    = local.github-token
   repo-name       = var.repo-name
   repo-owner-name = var.repo-owner
-  branch-name = "dev"
+  branch-name = "main"
   cluster-name = module.survivorpool-cluster.cluster-name
   container-name = var.container-name
   image-tag = "latest"
@@ -100,8 +103,8 @@ module "survivorpool-cicd-pipeline" {
     APP_NAME = var.app-name
     ENV = var.env
     DATABASE_HOST = module.survivorpool-db.database-url
-    DATABASE_URL = "postgresql+psycopg2://${local.db-user}:${local.db-password}@${module.survivorpool-db.database-url}/postgres" 
-    SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://${local.db-user}:${local.db-password}@${module.survivorpool-db.database-url}/postgres" 
+    DATABASE_URL = "postgresql+psycopg2://${local.db-user}:${local.db-password}@${module.survivorpool-db.database-url}/postgres"
+    SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://${local.db-user}:${local.db-password}@${module.survivorpool-db.database-url}/postgres"
     DATABASE_PASSWORD = local.db-password
     DB_PASSWORD = local.db-password
     DB_USER = local.db-user
@@ -112,5 +115,5 @@ module "survivorpool-cicd-pipeline" {
     COGNITO_URL = var.cognito-url
     COGNITO_CLIENT_ID = local.cognito-client-id
     ADMIN_EMAILS = local.admin-emails
-    }
+  }
 }

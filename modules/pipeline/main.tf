@@ -1,6 +1,6 @@
 # MANUAL STEPS - NEED TO AUTHENTICATE GITHUB CONNECTION IN UI AND GIVE CODEBUILD ACCESS TO THE REPO IN UI 
 resource "aws_codestarconnections_connection" "codestar_connection" {
-  name          = "${var.app-name}connection"
+  name          = "${var.app-name}-connection"
   provider_type = "GitHub"
 }
 

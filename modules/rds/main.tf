@@ -2,7 +2,7 @@ resource "aws_db_instance" "postgres-db-instance" {
   allocated_storage    = 20
   db_subnet_group_name = var.db-subnet-group-name
   engine               = "postgres"
-  engine_version       = "14.6"
+  engine_version       = "14.7"
   identifier           = "${var.app-name}-${var.env}-db"
   instance_class       = var.db-instance-class
   password             = var.db-password
@@ -13,4 +13,6 @@ resource "aws_db_instance" "postgres-db-instance" {
   apply_immediately = true
   parameter_group_name = var.db-parameter-group-name
   vpc_security_group_ids  = var.vpc-security-group-ids
+  multi_az = false
+  
 }

@@ -65,12 +65,12 @@ resource "aws_security_group" "rds" {
   name   = "${var.app-name}-${var.env}-rds-sg"
   vpc_id = aws_vpc.vpc.id
 
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = var.white-list-ips
-  }
+#  ingress {
+#    from_port   = 5432
+#    to_port     = 5432
+#    protocol    = "tcp"
+#    cidr_blocks = var.white-list-ips
+#  }
 
   #CODE BUILD IP RANGE FOR DB MIGRATIONS
   ingress {
@@ -78,6 +78,13 @@ resource "aws_security_group" "rds" {
     to_port = 5432
     protocol = "tcp"
     cidr_blocks = ["34.228.4.208/28"]
+  }
+  
+  ingress {
+    from_port = 5432
+    to_port = 5432
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
